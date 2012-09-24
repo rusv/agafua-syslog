@@ -64,3 +64,11 @@ You can achieve better logging performance if you disable log records synchroniz
 {{{
 local0.* -/var/log/local0.log
 }}}
+
+== Advanced Options ==
+
+=== TCP Transport ===
+Usage of syslog with TCP transport is supported by specifying option
+{{{
+com.agafua.syslog.SyslogHandler.transport = tcp
+}}}
