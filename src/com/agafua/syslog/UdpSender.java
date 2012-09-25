@@ -34,33 +34,21 @@ import java.util.concurrent.BlockingQueue;
 class UdpSender implements Runnable {
     private static final int FAILURE_TIMEOUT = 5000;
 
-    private final Thread callerThread;
     private final String hostName;
     private final int port;
     private final Thread worker;
     private final BlockingQueue<Message> blockingQueue;
-    private final boolean daemonMode;
 
-    public UdpSender(String hostName, int port, BlockingQueue<Message> blockingQueue, boolean daemonMode) {
-        this.callerThread = Thread.currentThread();
+    public UdpSender(String hostName, int port, BlockingQueue<Message> blockingQueue) {
         this.hostName = hostName;
         this.port = port;
         this.worker = new Thread(new Worker());
         this.blockingQueue = blockingQueue;
-        this.daemonMode = daemonMode;
     }
 
     @Override
     public void run() {
         worker.start();
-        if (!daemonMode) {
-            try {
-                callerThread.join();
-                worker.interrupt();
-            } catch (InterruptedException e) {
-                worker.interrupt();
-            }
-        }
     }
 
     private class Worker implements Runnable {
