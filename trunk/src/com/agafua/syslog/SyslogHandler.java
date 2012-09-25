@@ -51,7 +51,6 @@ public class SyslogHandler extends Handler {
     private final int port;
     private final Facility facility;
     private final Transport transport;
-    private final boolean daemonMode;
 
     private BlockingQueue<Message> blockingQueue = new ArrayBlockingQueue<Message>(LOG_QUEUE_SIZE);
     private boolean closed = false;
@@ -66,12 +65,11 @@ public class SyslogHandler extends Handler {
         hostName = parseHostName();
         port = parsePort();
         facility = parseFacility();
-        daemonMode = parseDaemonMode();
         setFormatter(new SimpleFormatter());
         if (Transport.TCP.equals(transport)) {
-            worker = new Thread(new TcpSender(hostName, port, blockingQueue, daemonMode));
+            worker = new Thread(new TcpSender(hostName, port, blockingQueue));
         } else {
-            worker = new Thread(new UdpSender(hostName, port, blockingQueue, daemonMode));
+            worker = new Thread(new UdpSender(hostName, port, blockingQueue));
         }
         worker.start();
     }
@@ -176,17 +174,6 @@ public class SyslogHandler extends Handler {
             }
         }
         return Facility.USER;
-    }
-
-    private boolean parseDaemonMode() {
-        String daemonModeProperty = SyslogHandler.class.getName() + "." + DAEMON_MODE_PROPERTY;
-        String daemonModeValue = LogManager.getLogManager().getProperty(daemonModeProperty);
-        for(String s : Arrays.asList("yes", "true")) {
-            if(s.equalsIgnoreCase(daemonModeValue)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private String getMyHostName() {
