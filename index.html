@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>Agafua-syslog by rusv</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">Agafua-syslog</h1>
+      <h2 class="project-tagline">Syslog handler implementation for java.util.logging.Handler</h2>
+      <a href="https://github.com/rusv/agafua-syslog" class="btn">View on GitHub</a>
+      <a href="https://github.com/rusv/agafua-syslog/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/rusv/agafua-syslog/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <h1>
+<a id="getting-started" class="anchor" href="#getting-started" aria-hidden="true"><span class="octicon octicon-link"></span></a>Getting Started</h1>
+
+<p>Syslog handler implementation for java.util.logging.Handler</p>
+
+<h2>
+<a id="intoduction" class="anchor" href="#intoduction" aria-hidden="true"><span class="octicon octicon-link"></span></a>Intoduction</h2>
+
+<p>Syslog protocol is described in</p>
+
+<ul>
+<li>RFC 3164 - The BSD Syslog Protocol</li>
+</ul>
+
+<p>In the example below we will send log messages to facility "local0" of syslog / rsyslog service located on localhost and listening UDP on port 514. We will use logging configuration file <strong>logging.properties</strong>.</p>
+
+<h2>
+<a id="library" class="anchor" href="#library" aria-hidden="true"><span class="octicon octicon-link"></span></a>Library</h2>
+
+<p>Download the latest version of agafua-syslog JAR. It should be available on the Java classpath of your project.</p>
+
+<h2>
+<a id="logging-configuration-example" class="anchor" href="#logging-configuration-example" aria-hidden="true"><span class="octicon octicon-link"></span></a>Logging Configuration Example</h2>
+
+<p>Here is an example of java.util.logging configuration file</p>
+
+<pre><code>handlers= java.util.logging.ConsoleHandler, com.agafua.syslog.SyslogHandler
+
+.level= FINEST
+
+# Console handler configuration
+java.util.logging.ConsoleHandler.level = FINEST
+java.util.logging.ConsoleHandler.formatter = java.util.logging.SimpleFormatter
+
+# Syslog logger
+com.agafua.syslog.SyslogHandler.transport = udp
+com.agafua.syslog.SyslogHandler.facility = local0
+com.agafua.syslog.SyslogHandler.port = 514
+com.agafua.syslog.SyslogHandler.hostname = localhost
+</code></pre>
+
+<p>In example above two handlers are configured - Console handler and Syslog handler that
+sends log records for facility local0 to port 514 of localhost using UDP transport.</p>
+
+<p>Selection of formatter and log level is not available in current version.</p>
+
+<p>To tell java virtual machine to use specific logging configuration add a VM option:</p>
+
+<pre><code>-Djava.util.logging.config.file=logging.properties
+</code></pre>
+
+<h2>
+<a id="rsyslog--syslog-configutation" class="anchor" href="#rsyslog--syslog-configutation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Rsyslog / Syslog configutation</h2>
+
+<h3>
+<a id="ubuntu-1004" class="anchor" href="#ubuntu-1004" aria-hidden="true"><span class="octicon octicon-link"></span></a>Ubuntu 10.04</h3>
+
+<p>Enable listening of UDP on port 514 in /etc/rsyslog.conf</p>
+
+<pre><code>$ModLoad imudp
+$UDPServerRun 514
+</code></pre>
+
+<p>Logging rules are configured in files in directory /etc/rsyslog.d
+Create a file 60-java.conf and configure logging</p>
+
+<pre><code>local0.* /var/log/local0.log
+</code></pre>
+
+<p>Configuration above will log all records to addressed to facility local0 to file /var/log/local0.log
+You can achieve better logging performance if you disable log records synchronization by adding "-" before file name, but this way some time could pass before record will become visible in log</p>
+
+<pre><code>local0.* -/var/log/local0.log
+</code></pre>
+
+<h2>
+<a id="advanced-options" class="anchor" href="#advanced-options" aria-hidden="true"><span class="octicon octicon-link"></span></a>Advanced Options</h2>
+
+<h3>
+<a id="tcp-transport" class="anchor" href="#tcp-transport" aria-hidden="true"><span class="octicon octicon-link"></span></a>TCP Transport</h3>
+
+<p>Usage of syslog with TCP transport is supported by specifying option</p>
+
+<pre><code>com.agafua.syslog.SyslogHandler.transport = tcp
+</code></pre>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/rusv/agafua-syslog">Agafua-syslog</a> is maintained by <a href="https://github.com/rusv">rusv</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+            <script type="text/javascript">
+            var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+            document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+          </script>
+          <script type="text/javascript">
+            try {
+              var pageTracker = _gat._getTracker("UA-35088217-2");
+            pageTracker._trackPageview();
+            } catch(err) {}
+          </script>
+
+  </body>
+</html>
+
