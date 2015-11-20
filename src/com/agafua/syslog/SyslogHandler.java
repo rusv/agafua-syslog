@@ -23,7 +23,6 @@ THE SOFTWARE.
 package com.agafua.syslog;
 
 import java.net.UnknownHostException;
-import java.util.Arrays;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.logging.*;
@@ -46,12 +45,14 @@ public class SyslogHandler extends Handler {
     private static final String PORT_PROPERTY = "port";
     private static final String FACILITY_PROPERTY = "facility";
     private static final String DAEMON_MODE_PROPERTY = "daemon";
+    private static final String FORMATTER_PROPERTY = "formatter";
 
     private final String hostName;
     private final int port;
     private final Facility facility;
     private final Transport transport;
-
+    private final Formatter formatter;
+    
     private BlockingQueue<Message> blockingQueue = new ArrayBlockingQueue<Message>(LOG_QUEUE_SIZE);
     private boolean closed = false;
     private Thread worker;
@@ -65,6 +66,7 @@ public class SyslogHandler extends Handler {
         hostName = parseHostName();
         port = parsePort();
         facility = parseFacility();
+        formatter = parseFormatter();
         setFormatter(new SimpleFormatter());
         if (Transport.TCP.equals(transport)) {
             worker = new Thread(new TcpSender(hostName, port, blockingQueue));
@@ -86,7 +88,7 @@ public class SyslogHandler extends Handler {
             String timestamp = adaptor.adaptTimeStamp(record);
             message.print(timestamp);
             message.print(" ");
-            String host = getMyHostName();
+            String host = getLocalHostname();
             message.print(host);
             message.print(" ");
             String msg = getFormatter().format(record);
@@ -129,8 +131,11 @@ public class SyslogHandler extends Handler {
     }
 
     private Transport parseTransport() {
-        String transportProperty = SyslogHandler.class.getName() + "." + TRANSPORT_PROPERTY;
-        String transportValue = LogManager.getLogManager().getProperty(transportProperty);
+        String transportValue = ConfigurationUtil
+                .getStringPropertyOfLogHandlerClass(
+                        SyslogHandler.class,
+                        TRANSPORT_PROPERTY
+                );
         for (Transport t : Transport.values()) {
             if (t.name().equalsIgnoreCase(transportValue)) {
                 return t;
@@ -140,8 +145,11 @@ public class SyslogHandler extends Handler {
     }
 
     private String parseHostName() {
-        String hostNameProperty = SyslogHandler.class.getName() + "." + HOSTNAME_PROPERTY;
-        String hostNameValue = LogManager.getLogManager().getProperty(hostNameProperty);
+        String hostNameValue = ConfigurationUtil
+                .getStringPropertyOfLogHandlerClass(
+                        SyslogHandler.class,
+                        HOSTNAME_PROPERTY
+                );
         if (hostNameValue != null && hostNameValue.length() > 0) {
             return hostNameValue;
         }
@@ -149,8 +157,11 @@ public class SyslogHandler extends Handler {
     }
 
     private int parsePort() {
-        String portProperty = SyslogHandler.class.getName() + "." + PORT_PROPERTY;
-        String portValue = LogManager.getLogManager().getProperty(portProperty);
+        String portValue = ConfigurationUtil
+                .getStringPropertyOfLogHandlerClass(
+                        SyslogHandler.class,
+                        PORT_PROPERTY
+                );
         if (portValue != null) {
             Integer p = null;
             try {
@@ -166,8 +177,11 @@ public class SyslogHandler extends Handler {
     }
 
     private Facility parseFacility() {
-        String facilityProperty = SyslogHandler.class.getName() + "." + FACILITY_PROPERTY;
-        String facilityValue = LogManager.getLogManager().getProperty(facilityProperty);
+        String facilityValue = ConfigurationUtil
+                .getStringPropertyOfLogHandlerClass(
+                        SyslogHandler.class,
+                        FACILITY_PROPERTY
+                );
         for (Facility f : Facility.values()) {
             if (f.name().equalsIgnoreCase(facilityValue)) {
                 return f;
@@ -176,7 +190,7 @@ public class SyslogHandler extends Handler {
         return Facility.USER;
     }
 
-    private String getMyHostName() {
+    private String getLocalHostname() {
         if (myHostName != null) {
             return myHostName;
         }
@@ -201,4 +215,62 @@ public class SyslogHandler extends Handler {
         myHostName = MY_HOST_NAME;
         return myHostName;
     }
+    
+    /**
+     * Parse formatter class from the property, instantiate it and use 
+     * in the class.
+     * If there any problems within parsing or instantiating of <tt>formatter</tt>
+     * property, the <tt>net.java.util.logging.SimpleFormatter</tt> will be used
+     * 
+     * @return The instance of formatter to be used to format actual log 
+     *         output
+     */
+    private Formatter parseFormatter() {
+        Class formatterClass = null;
+        Formatter formatterInstance = null;
+        String formatterClassProperty = ConfigurationUtil
+                .getStringPropertyOfLogHandlerClass(
+                        SyslogHandler.class,
+                        FORMATTER_PROPERTY
+                );
+        
+        if (formatterClassProperty != null) {
+            try {
+                formatterClass = ClassLoader.getSystemClassLoader().loadClass(formatterClassProperty);
+            } 
+            catch (ClassNotFoundException e) {
+                // ignore
+            }
+        }
+        
+        if (formatterClass != null) {
+            try {
+                formatterInstance = (Formatter)formatterClass.newInstance();
+            } 
+            catch (InstantiationException e) {
+                // ignore
+            }
+            catch (IllegalAccessException e) {
+                // ignore
+            }
+        }
+        
+        if (formatterInstance == null) {
+            formatterInstance = new SimpleFormatter();
+        }
+        
+        return formatterInstance;
+        
+    }
+
+
+    /**
+     * Get the log formatter instance used by this <tt>SyslogHandler</tt>
+     * 
+     * @return <tt>Formatter</tt> instance
+     */
+    public Formatter getFormatter() {
+        return this.formatter;
+    }
+    
 }
