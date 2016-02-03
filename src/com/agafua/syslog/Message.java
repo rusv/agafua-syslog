@@ -58,7 +58,8 @@ class Message {
                 continue;
 
             if (c == 10) {
-                b[i] = LF_SYMBOL;
+                if(SyslogHandler.escapeNewLines)
+                    b[i] = LF_SYMBOL;
             } else {
                 b[i] = NON_ASCII_SYMBOL;
             }
