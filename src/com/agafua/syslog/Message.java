@@ -22,45 +22,52 @@ THE SOFTWARE.
 
 package com.agafua.syslog;
 
+import java.io.*;
+
 /**
  * Message for sending by worker implementation.
+ *
+ * No message capacity restrictions.
+ * rfc5424(The Syslog Protocol) recommends supporting at least 2048 bytes
+ * for messages and the capacity depends of the transport protocol.
+ * rfc5426(Transmission of Syslog Messages over UDP) mentions size of 65535
+ * minus the udp headers. Over the network udp messages will be truncated
+ * by MTU. Localhost MTU in linux systems is 65536.
+ * Although the default message size for some syslog daemons by default is 8k
+ * (http://www.rsyslog.com/doc/v8-stable/configuration/global/index.html)
  */
 class Message {
-    private static final int MESSAGE_SIZE = 1024;
     private static final byte NON_ASCII_SYMBOL = (byte) '.';
     private static final byte LF_SYMBOL = (byte) '\\';
-    private byte[] value = new byte[MESSAGE_SIZE];
-    private int pos = 0;
+    private ByteArrayOutputStream value = new ByteArrayOutputStream();
 
     public int getLength() {
-        return pos;
+        return value.size();
     }
 
     public byte[] getBytes() {
-        return value;
+        return value.toByteArray();
     }
 
-    public void print(String s) {
-        for (int i = 0; i < s.length(); i++) {
-            if (pos >= MESSAGE_SIZE) {
-                break;
-            }
-            char c = s.charAt(i);
-            if (c >= 32 && c <= 126) {
-                value[pos] = (byte) c;
-            } else if (c == 10) {
-                value[pos] = LF_SYMBOL;
+    public void print(String s) throws IOException {
+        byte[] b = s.getBytes();
+        for (int i = 0; i < b.length; i++) {
+            byte c = b[i];
+
+            if (c >= 32 && c <= 126)
+                continue;
+
+            if (c == 10) {
+                b[i] = LF_SYMBOL;
             } else {
-                value[pos] = NON_ASCII_SYMBOL;
+                b[i] = NON_ASCII_SYMBOL;
             }
-            pos++;
         }
+        value.write(b);
     }
 
     @Override
     public String toString() {
-        byte[] b = new byte[pos];
-        System.arraycopy(value, 0, b, 0, pos);
-        return new String(b);
+        return value.toString();
     }
 }
