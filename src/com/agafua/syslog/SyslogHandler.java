@@ -46,6 +46,7 @@ public class SyslogHandler extends Handler {
     private static final String FACILITY_PROPERTY = "facility";
     private static final String DAEMON_MODE_PROPERTY = "daemon";
     private static final String FORMATTER_PROPERTY = "formatter";
+    private static final String ESCAPE_NEWLINES_PROPERTY = "escapeNewlines";
 
     private final String hostName;
     private final int port;
@@ -59,6 +60,14 @@ public class SyslogHandler extends Handler {
     private volatile String myHostName;
 
     private Adaptor adaptor = new Adaptor();
+
+    /**
+     * Option to disable replacing new lines, on by default.
+     */
+    final static boolean escapeNewLines;
+    static {
+        escapeNewLines = parseEscapeNewlines();
+    }
 
     public SyslogHandler() {
         super();
@@ -272,5 +281,22 @@ public class SyslogHandler extends Handler {
     public Formatter getFormatter() {
         return this.formatter;
     }
-    
+
+    /**
+     * Checks for ESCAPE_NEWLINES_PROPERTY and return its boolean value if any.
+     * By default new lines are escaped.
+     * @return whether new lines need to be escaped.
+     */
+    private static boolean parseEscapeNewlines() {
+        String escapeProperty = ConfigurationUtil
+            .getStringPropertyOfLogHandlerClass(
+                SyslogHandler.class,
+                ESCAPE_NEWLINES_PROPERTY
+            );
+        // by default new lines are replaced
+        if(escapeProperty != null)
+            return Boolean.parseBoolean(escapeProperty);
+        else
+            return true;
+    }
 }
