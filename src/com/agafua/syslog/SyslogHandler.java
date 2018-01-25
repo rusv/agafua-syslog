@@ -22,6 +22,7 @@ THE SOFTWARE.
 
 package com.agafua.syslog;
 
+import java.lang.management.ManagementFactory;
 import java.net.UnknownHostException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -47,6 +48,9 @@ public class SyslogHandler extends Handler {
     private static final String DAEMON_MODE_PROPERTY = "daemon";
     private static final String FORMATTER_PROPERTY = "formatter";
     private static final String ESCAPE_NEWLINES_PROPERTY = "escapeNewlines";
+    private static final String USE_SHORT_HOSTNAME_PROPERTY = "useShortHostname";
+    private static final String PROCESS_NAME_PROPERTY = "processName";
+    private static final String INCLUDE_PID_PROPERTY = "includePid";
 
     private final String hostName;
     private final int port;
@@ -58,6 +62,10 @@ public class SyslogHandler extends Handler {
     private boolean closed = false;
     private Thread worker;
     private volatile String myHostName;
+    private boolean useShortHostName;
+    private String processName;
+    private boolean includePid;
+    private String myPid;
 
     private Adaptor adaptor = new Adaptor();
 
@@ -76,6 +84,9 @@ public class SyslogHandler extends Handler {
         port = parsePort();
         facility = parseFacility();
         formatter = parseFormatter();
+        useShortHostName = parseShortHostname();
+        processName = parseProcessName();
+        includePid = parseIncludePid();
         setFormatter(new SimpleFormatter());
         if (Transport.TCP.equals(transport)) {
             worker = new Thread(new TcpSender(hostName, port, blockingQueue));
@@ -100,6 +111,16 @@ public class SyslogHandler extends Handler {
             String host = getLocalHostname();
             message.print(host);
             message.print(" ");
+            if (processName != null) {
+                message.print(processName);
+                if (includePid) {
+                    message.print("[");
+                    String pid = getMyPid();
+                    message.print(pid);
+                    message.print("]");
+                }
+                message.print(": ");
+            }
             String msg = getFormatter().format(record);
             message.print(msg);
             blockingQueue.offer(message);
@@ -137,6 +158,30 @@ public class SyslogHandler extends Handler {
 
     public String getFacility() {
         return facility.name();
+    }
+
+    public boolean isUseShortHostName() {
+        return useShortHostName;
+    }
+
+    public void setUseShortHostName(boolean useShortHostName) {
+        this.useShortHostName = useShortHostName;
+    }
+
+    public String getProcessName() {
+        return processName;
+    }
+
+    public void setProcessName(String processName) {
+        this.processName = processName;
+    }
+
+    public boolean isIncludePid() {
+        return includePid;
+    }
+
+    public void setIncludePid(boolean includePid) {
+        this.includePid = includePid;
     }
 
     private Transport parseTransport() {
@@ -206,8 +251,12 @@ public class SyslogHandler extends Handler {
         try {
             String localHostName = java.net.InetAddress.getLocalHost().getHostName();
             if (localHostName != null) {
-                myHostName = localHostName;
-                return localHostName;
+                if (useShortHostName) {
+                    myHostName = localHostName.split("\\.")[0];
+                } else {
+                    myHostName = localHostName;
+                }
+                return myHostName;
             }
         } catch (UnknownHostException e) {
             // Nothing
@@ -224,7 +273,75 @@ public class SyslogHandler extends Handler {
         myHostName = MY_HOST_NAME;
         return myHostName;
     }
-    
+
+    /**
+     * Parse the property that controls whether a simple hostname should be logged instead of a FQDN
+     *
+     * @return true if a simple hostname should be logged instead of a FQDN
+     */
+    private boolean parseShortHostname() {
+        String value = ConfigurationUtil
+                .getStringPropertyOfLogHandlerClass(
+                        SyslogHandler.class,
+                        USE_SHORT_HOSTNAME_PROPERTY
+                );
+        if (value == null) {
+            // Defaults to false
+            return false;
+        }
+        return Boolean.parseBoolean(value);
+    }
+
+    /**
+     * Parse process name to be logged from a property
+     *
+     * @return Process name to be logged
+     */
+    private String parseProcessName() {
+        return ConfigurationUtil
+                .getStringPropertyOfLogHandlerClass(
+                        SyslogHandler.class,
+                        PROCESS_NAME_PROPERTY
+                );
+    }
+
+    /**
+     * Parse property that controls whether a PID should be logged after the process name
+     * E.g. "process-name[123]:"
+     *
+     * @return Process name to be logged
+     */
+    private boolean parseIncludePid() {
+        String value = ConfigurationUtil
+                .getStringPropertyOfLogHandlerClass(
+                        SyslogHandler.class,
+                        INCLUDE_PID_PROPERTY
+                );
+        if (value == null) {
+            // Defaults to true
+            return true;
+        }
+        return Boolean.parseBoolean(value);
+    }
+
+    /**
+     * Get the PID of the current process
+     *
+     * @return Current process PID
+     */
+    private String getMyPid() {
+        if (myPid != null) {
+            return myPid;
+        }
+        try {
+            // Quick and dirty: see https://maxrohde.com/2012/12/13/java-get-process-id-three-approaches/
+            myPid = ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
+        } catch (Exception ex) {
+            myPid = "0";
+        }
+        return myPid;
+    }
+
     /**
      * Parse formatter class from the property, instantiate it and use 
      * in the class.
